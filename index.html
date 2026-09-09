@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Proyector Bíblico RV</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{
+    --bg:#0a0a0a;
+    --panel:#1b1b1b;
+    --field:#2f2f33;
+    --gold:#81651f;
+    --blue:#2c7bb3;
+    --green:#32af67;
+    --red:#8a2b2b;
+    --darkbtn:#2b2b2b;
+    --darkbtn-2:#333;
+    --text:#f2f2f2;
+    --muted:#9a9a9a;
+    --radius:16px;
+
+    --display-bg:#0a0a0a;
+    --display-fg:#ffffff;
+    --display-size:32px;
+    --display-font:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+  }
+  .app{max-width:480px;margin:0 auto;padding:16px 16px 40px;}
+  .screen{display:none;}
+  .screen.active{display:block;}
+
+  header.top{text-align:center;padding:10px 0 18px;}
+  header.top .medal{font-size:2.4rem;line-height:1;}
+  header.top h1{font-size:1.25rem;margin:6px 0 0;font-weight:700;}
+
+  input[type=text], textarea, select{
+    width:100%;
+    padding:13px 12px;
+    border-radius:12px;
+    border:1px solid #3a3a3a;
+    background:var(--field);
+    color:var(--text);
+    font-size:1rem;
+    font-family:inherit;
+  }
+  input::placeholder, textarea::placeholder{color:var(--muted);}
+
+  /* Fila: barra de búsqueda (más pequeña) + botón de teclado */
+  .search-row{display:flex;gap:8px;align-items:stretch;margin-bottom:16px;}
+  .search-bar{position:relative;flex:1;margin-bottom:0;}
+  .search-bar input{padding-left:34px;padding-top:11px;padding-bottom:11px;font-size:.92rem;}
+  .search-bar .ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.9rem;}
+  .btn-teclado{
+    flex-shrink:0;width:52px;border:none;border-radius:var(--radius);
+    background:var(--darkbtn-2);color:#fff;font-size:1.3rem;cursor:pointer;
+  }
+  .btn-teclado.abierto{background:var(--blue);}
+
+  /* Teclado rápido de libros */
+  .teclado-libros{
+    background:#1a1a1a;border-radius:var(--radius);padding:12px;margin-bottom:16px;
+  }
+  .teclado-letras{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;}
+  .tecla{
+    width:38px;height:38px;border:none;border-radius:9px;background:var(--darkbtn-2);
+    color:#fff;font-family:inherit;font-size:1rem;font-weight:700;cursor:pointer;
+  }
+  .tecla.activa{background:var(--blue);}
+  .tecla.vacia{opacity:.3;}
+  .teclado-resultados{display:flex;flex-direction:column;gap:6px;margin-top:12px;}
+  .teclado-resultados:empty{margin-top:0;}
+  .libro-resultado{
+    border:none;border-radius:10px;padding:12px 14px;background:#252525;color:#fff;
+    font-family:inherit;font-size:.95rem;text-align:left;cursor:pointer;
+  }
+  .libro-resultado.actual{background:var(--blue);}
+  .teclado-vacio{color:var(--muted);font-size:.85rem;text-align:center;padding:8px 0;}
+
+  label.field-label{display:block;color:var(--muted);font-size:.92rem;margin:0 0 6px;}
+  .field-block{margin-bottom:14px;}
+  .field-row{display:flex;gap:14px;margin-bottom:14px;}
+  .field-row>div{flex:1;}
+
+  .selectbtn{
+    width:100%;text-align:left;
+    padding:13px 14px;border-radius:12px;
+    background:var(--field);color:#fff;border:1px solid #3a3a3a;
+    font-size:1rem;font-weight:700;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .selectbtn .chev{color:var(--muted);font-size:.8rem;}
+
+  button{font-family:inherit;cursor:pointer;border:none;color:#fff;}
+  .btn{
+    display:block;width:100%;padding:15px 14px;border-radius:var(--radius);
+    font-size:1.02rem;font-weight:700;margin-bottom:12px;text-align:center;
+  }
+  .btn:active{filter:brightness(.9);}
+  .row-btns{display:flex;gap:12px;}
+  .row-btns .btn{flex:1;margin-bottom:12px;}
+  .btn-half{background:var(--darkbtn-2);}
+  .btn-gold{background:var(--gold);}
+  .btn-blue{background:var(--blue);}
+  .btn-green{background:var(--green);}
+  .btn-red{background:var(--red);}
+  .btn-dark{background:var(--darkbtn);}
+
+  hr{border:none;border-top:1px solid #2a2a2a;margin:16px 0;}
+
+  .display-panel{
+    background:var(--display-bg);border-radius:var(--radius);
+    padding:26px 18px;min-height:200px;display:flex;flex-direction:column;
+    justify-content:center;align-items:center;text-align:center;margin-bottom:14px;
+    position:relative;
+  }
+  /* Cuando el panel está en modo pantalla completa (proyector real):
+     ocupa toda la pantalla, sin bordes redondeados ni margen. */
+  .display-panel:fullscreen,
+  .display-panel:-webkit-full-screen{
+    width:100vw; height:100vh; max-width:none;
+    border-radius:0; margin:0; padding:40px;
+  }
+  .display-panel:fullscreen #displayContent,
+  .display-panel:-webkit-full-screen #displayContent{
+    font-size:calc(var(--display-size) * 1.4);
+  }
+  /* Modo proyección propio (no depende de la API Fullscreen del navegador,
+     así evitamos el aviso "Para salir de pantalla completa..." de Chrome) */
+  body.projecting{overflow:hidden;}
+  body.projecting #screen-home > *:not(#displayPanel){display:none !important;}
+  body.projecting .app{max-width:none;padding:0;margin:0;}
+  body.projecting #displayPanel{
+    position:fixed; top:0; left:0; width:100vw; height:100vh;
+    border-radius:0; margin:0; padding:18px 24px 66px; z-index:9999;
+  }
+  body.projecting #displayContent{
+    font-size:calc(var(--display-size) * 1.4);
+  }
+  #displayContent{
+    color:var(--display-fg);font-family:var(--display-font);
+    font-size:var(--display-size);line-height:1.35;font-weight:700;white-space:pre-wrap;
+  }
+  #displayRef{color:#4fa8e0;font-size:1rem;margin-top:12px;font-weight:600;}
+  #displayEmpty{color:#5a5a5a;font-size:1.05rem;}
+  .display-controls{display:flex;gap:12px;align-items:center;margin-top:20px;width:100%;justify-content:center;}
+  .display-controls .btn{margin:0;width:auto;padding:12px 20px;}
+  /* En pantalla completa: los controles se van a la esquina para dejar
+     todo el espacio al versículo */
+  body.projecting #displayControls{
+    position:fixed;right:12px;bottom:12px;width:auto;margin:0;
+    gap:8px;justify-content:flex-end;z-index:6;opacity:.9;
+  }
+  body.projecting #displayControls .btn{padding:8px 14px;font-size:.85rem;}
+  body.projecting #displayControls .icon-btn{width:38px;height:38px;font-size:1rem;}
+  /* Las miniaturas quedan en la esquina opuesta para no chocar */
+  body.projecting .panel-images .quick-images-strip{justify-content:flex-start;}
+  .icon-btn{background:#242424;color:#fff;width:46px;height:46px;border-radius:12px;font-size:1.15rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+  .nav-buttons{display:flex;gap:14px;}
+  .nav-buttons button{flex:1;padding:15px;border-radius:var(--radius);background:var(--darkbtn-2);color:#fff;font-size:1rem;font-weight:600;}
+
+  /* ---- Imágenes: galería y acceso rápido ---- */
+  .images-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:14px;}
+  .image-card{position:relative;border-radius:var(--radius);overflow:hidden;background:#1c1c1c;border:2px solid transparent;}
+  .image-card.selected{border-color:var(--green);}
+  .image-card img{width:100%;height:120px;object-fit:cover;display:block;}
+  .image-card .image-actions{display:flex;gap:6px;padding:8px;}
+  .image-card .image-actions button{
+    flex:1;border:none;border-radius:8px;padding:8px 6px;font-family:inherit;
+    font-size:.82rem;font-weight:600;color:#fff;background:var(--darkbtn-2);
+  }
+  .image-card .image-actions .del{background:#7a2222;}
+
+  .quick-images{margin:2px 0 12px;}
+  .quick-images-label{font-size:.74rem;color:#8a8a8a;margin-top:8px;text-align:center;}
+  /* Cuadritos: se acomodan en filas y bajan solos cuando son muchos */
+  .quick-images-strip{display:flex;flex-wrap:wrap;gap:8px;}
+  .quick-thumb{
+    position:relative;width:58px;height:58px;border-radius:10px;overflow:hidden;
+    flex-shrink:0;border:2px solid #3a3a3a;background:#1c1c1c;
+  }
+  .quick-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .quick-thumb .num{
+    position:absolute;top:0;left:0;background:rgba(0,0,0,.66);color:#fff;
+    font-size:.66rem;font-weight:700;padding:1px 5px;border-radius:0 0 6px 0;
+  }
+  .quick-thumb.active{border-color:var(--green);}
+  .quick-thumb.active::after{
+    content:'';position:absolute;inset:0;border:2px solid var(--green);border-radius:8px;
+  }
+
+  /* La imagen proyectada ocupa el panel completo */
+  #displayImage{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;}
+  /* En pantalla completa la imagen se ve entera, sin recortes */
+  body.projecting.showing-image #displayPanel{justify-content:center;padding:0;}
+  body.projecting #displayImage{
+    max-width:100vw;max-height:100vh;width:auto;height:auto;
+    object-fit:contain;border-radius:0;
+  }
+  /* Al proyectar una imagen se ocultan textos y controles para no tapar nada */
+  body.projecting.showing-image #displayRef,
+  body.projecting.showing-image #displayControls{display:none !important;}
+
+  /* Miniatura "0": vuelve al versículo/canción proyectado */
+  .quick-thumb.thumb-cero{
+    display:flex;align-items:center;justify-content:center;
+    background:#000;color:#fff;border-color:#555;
+  }
+  .quick-thumb.thumb-cero .cero-icono{font-size:1.15rem;line-height:1;}
+  .quick-thumb.thumb-cero .num{background:rgba(255,255,255,.18);}
+  /* Miniaturas dentro del panel de proyección */
+  .panel-images{margin-top:12px;width:100%;}
+  .panel-images .quick-images-strip{justify-content:center;}
+  .panel-images .quick-thumb{width:46px;height:46px;opacity:.85;}
+  .panel-images .quick-thumb.active{opacity:1;}
+  body.projecting .panel-images{
+    position:fixed;left:0;bottom:12px;margin:0;padding:0 14px;z-index:5;
+    width:auto;max-width:calc(100vw - 190px);
+  }
+  body.projecting .panel-images .quick-thumb{width:40px;height:40px;}
+
+  /* Sub-screens (Ajustes, Favoritos, Historial, Canciones, Picker) */
+  .screen-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;}
+  .screen-header h2{font-size:1.15rem;margin:0;flex:1;}
+  .screen-header .actions{display:flex;gap:8px;}
+  .btn-link{background:none;color:#cfcfcf;font-size:.95rem;padding:8px 4px;font-weight:600;}
+  .btn-link.danger{color:#ff9a9a;}
+
+  .settings-card{background:var(--panel);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
+  .settings-card h3{margin:0 0 12px;font-size:1rem;color:#d8d8d8;}
+  input[type=range]{width:100%;accent-color:var(--blue);}
+  .size-label{color:var(--muted);font-size:.9rem;}
+  .swatch-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .swatch{
+    display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;
+    background:#242424;border:2px solid transparent;color:#fff;font-weight:600;font-size:.95rem;
+  }
+  .swatch.selected{border-color:var(--blue);}
+  .swatch .chip{width:20px;height:20px;border-radius:6px;flex-shrink:0;border:1px solid #444;}
+  .custom-color-row input[type=color]{width:100%;height:44px;border:none;border-radius:10px;background:none;padding:0;}
+  .font-options label{
+    display:flex;align-items:center;justify-content:space-between;padding:12px 4px;
+    border-bottom:1px solid #2a2a2a;font-size:.98rem;cursor:pointer;
+  }
+  .font-options label:last-child{border-bottom:none;}
+  .preview-box{background:#000;border-radius:12px;padding:20px;min-height:100px;display:flex;align-items:center;justify-content:center;text-align:center;}
+
+  .list-item{
+    background:var(--panel);border-radius:12px;padding:14px;margin-bottom:10px;
+    display:flex;justify-content:space-between;align-items:flex-start;gap:10px;
+  }
+  .list-item .go{background:none;flex:1;text-align:left;color:#fff;padding:0;}
+  .list-item .ref{color:var(--gold);font-weight:700;margin-bottom:4px;}
+  .list-item .snippet{color:var(--muted);font-size:.88rem;}
+  .list-item .del{background:none;color:#ff8080;font-size:1.1rem;flex-shrink:0;padding:4px;}
+  .empty{color:var(--muted);text-align:center;padding:30px 0;}
+
+  .picker-list{max-height:70vh;overflow-y:auto;}
+  .picker-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:14px 6px;border-bottom:1px solid #262626;font-size:1.02rem;cursor:pointer;
+  }
+  .picker-row .radio{width:18px;height:18px;border-radius:50%;border:2px solid #666;flex-shrink:0;}
+  .picker-row.selected .radio{border-color:var(--blue);background:radial-gradient(var(--blue) 0 40%, transparent 44%);}
+  .picker-row.selected{color:#fff;font-weight:700;}
+
+  .song-tabs{display:flex;gap:8px;margin-bottom:14px;}
+  .song-tabs button{flex:1;padding:12px 4px;border-radius:12px;background:var(--darkbtn);color:#fff;font-size:.92rem;font-weight:700;}
+  .song-tabs button.active{background:var(--blue);}
+  textarea.lyrics{min-height:140px;resize:vertical;margin-bottom:14px;}
+  .audio-player{background:var(--panel);border-radius:12px;padding:14px;margin-bottom:14px;}
+  .audio-player .row{display:flex;align-items:center;gap:10px;}
+  .audio-player .row button{background:var(--darkbtn);width:40px;height:40px;border-radius:50%;flex-shrink:0;}
+  .audio-player input[type=range]{flex:1;}
+  .audio-player .time{color:var(--muted);font-size:.85rem;}
+  .hint{color:var(--muted);font-size:.85rem;margin:0 0 14px;}
+
+  /* Overlays */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:flex-end;justify-content:center;z-index:50;}
+  .overlay.open{display:flex;}
+  .modal{background:#1a1a1a;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;border-radius:20px 20px 0 0;padding:20px 18px 30px;}
+  .modal h2{margin:0 0 10px;font-size:1.15rem;display:flex;align-items:center;justify-content:space-between;}
+  .modal h2 .x{background:none;color:#aaa;font-size:1.4rem;line-height:1;padding:4px;}
+  .modal .hint{margin-bottom:14px;}
+  .search-input-row{position:relative;margin-bottom:6px;}
+  .search-input-row input{padding-right:44px;}
+  .search-input-row .mic{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;color:var(--muted);font-size:1.2rem;padding:6px;}
+  .search-input-row .mic.listening{color:#ff5a5a;}
+  #buscarMsg{min-height:1.2em;color:#ff8b8b;font-size:.88rem;margin-bottom:10px;}
+  #buscarResultados{margin-top:14px;max-height:50vh;overflow-y:auto;}
+  .result-item{
+    display:block;width:100%;text-align:left;background:none;
+    padding:10px 4px;border-bottom:1px solid #262626;
+  }
+  .result-item .result-ref{color:#4fa8e0;font-weight:700;font-size:.98rem;}
+  .result-item .result-snippet{color:var(--muted);font-size:.85rem;margin-top:2px;}
+  .result-more{color:var(--muted);font-size:.85rem;text-align:center;padding:10px 0;}
+
+  .share-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:8px;}
+  .share-opt{background:#242424;border-radius:14px;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;color:#fff;font-size:.82rem;}
+  .share-opt .ic{font-size:1.5rem;}
+
+  .status{color:var(--muted);font-size:.9rem;text-align:center;margin-bottom:10px;min-height:1.2em;}
+
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-thumb{background:#333;border-radius:4px;}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- ============ HOME ============ -->
+  <div class="screen active" id="screen-home">
+    <header class="top">
+      <div class="medal">🏅</div>
+      <h1>Proyector Bíblico RV</h1>
+    </header>
+
+    <div class="status" id="status">Cargando Biblia...</div>
+
+    <div class="search-row">
+      <div class="search-bar">
+        <span class="ico">🔍</span>
+        <input type="text" id="topSearch" placeholder="Buscar palabra o frase..." readonly>
+      </div>
+      <button class="btn-teclado" id="btnTecladoLibros" title="Buscar libro por letra">⌨</button>
+    </div>
+
+    <!-- Teclado rápido de libros: toca una letra y salen los libros que empiezan así -->
+    <div class="teclado-libros" id="tecladoLibros" style="display:none;">
+      <div class="teclado-letras" id="tecladoLetras"></div>
+      <div class="teclado-resultados" id="tecladoResultados"></div>
+    </div>
+
+    <div class="field-block">
+      <label class="field-label">Libro:</label>
+      <button class="selectbtn" id="btnLibro">
+        <span id="libroNombre">Génesis</span><span class="chev">▾</span>
+      </button>
+    </div>
+
+    <div class="field-row">
+      <div>
+        <label class="field-label">Capítulo:</label>
+        <button class="selectbtn" id="btnCapitulo"><span id="capituloNum">1</span><span class="chev">▾</span></button>
+      </div>
+      <div>
+        <label class="field-label">Versículo:</label>
+        <button class="selectbtn" id="btnVersiculo"><span id="versiculoNum">1</span><span class="chev">▾</span></button>
+      </div>
+    </div>
+
+    <div class="row-btns">
+      <button class="btn btn-half" id="btnAgrandar">+ Agrandar</button>
+      <button class="btn btn-half" id="btnAchicar">− Achicar</button>
+    </div>
+
+    <button class="btn btn-gold" id="btnFavorito">⭐ Guardar en favoritos</button>
+    <button class="btn btn-blue" id="btnBuscar">🔍 Buscar libro o versículo</button>
+    <button class="btn btn-green" id="btnProyectar">⤢ Proyectar pantalla completa</button>
+
+    <hr>
+
+    <button class="btn btn-dark" id="btnLetras">♫ Letras de canciones</button>
+    <button class="btn btn-dark" id="btnImagenes">🖼 Mis Imágenes</button>
+
+    <!-- Miniaturas de las imágenes ya subidas: toca una para proyectarla -->
+    <div class="quick-images" id="quickImages" style="display:none;">
+      <div class="quick-images-strip" id="quickImagesStrip"></div>
+      <div class="quick-images-label" id="quickImagesLabel"></div>
+    </div>
+    <button class="btn btn-dark" id="btnFavoritosList">♡ Mis Favoritos</button>
+    <button class="btn btn-dark" id="btnHistorial">↻ Historial Reciente</button>
+    <button class="btn btn-dark" id="btnAjustes">⚙ Ajustes de Pantalla</button>
+
+    <div class="display-panel" id="displayPanel">
+      <div id="displayEmpty">Selecciona un versículo para proyectarlo aquí.</div>
+      <div id="displayContent" style="display:none;"></div>
+      <img id="displayImage" style="display:none;" alt="">
+      <div id="displayRef" style="display:none;"></div>
+      <div class="display-controls" id="displayControls" style="display:none;">
+        <button class="btn btn-dark" id="btnSalir" style="width:auto;">Entrar</button>
+        <button class="icon-btn" id="btnCopiar" title="Copiar">⧉</button>
+        <button class="icon-btn" id="btnCompartir" title="Compartir">↗</button>
+      </div>
+
+      <!-- Miniaturas dentro del panel: cambiar de imagen sin salir de la proyección -->
+      <div class="panel-images" id="panelImages" style="display:none;">
+        <div class="quick-images-strip" id="panelImagesStrip"></div>
+      </div>
+    </div>
+
+    <div class="nav-buttons">
+      <button id="btnAnterior">‹ Anterior</button>
+      <button id="btnSiguiente">Siguiente ›</button>
+    </div>
+  </div>
+
+  <!-- ============ AJUSTES DE PANTALLA ============ -->
+  <div class="screen" id="screen-ajustes">
+    <div class="screen-header">
+      <h2>Ajustes de Pantalla</h2>
+      <button class="btn-link" data-go-home>‹ Volver</button>
+    </div>
+
+    <div class="settings-card">
+      <h3>Tamaño de letra</h3>
+      <input type="range" id="rangeSize" min="16" max="90" value="32">
+      <div class="size-label"><span id="sizeLabel">32px</span></div>
+    </div>
+
+    <div class="settings-card">
+      <h3>Color de fondo</h3>
+      <div class="swatch-grid" id="bgSwatches">
+        <button class="swatch selected" data-bg="#0a0a0a"><span class="chip" style="background:#0a0a0a;"></span>Negro</button>
+        <button class="swatch" data-bg="#12142e"><span class="chip" style="background:#12142e;"></span>Azul oscuro</button>
+        <button class="swatch" data-bg="#15222f"><span class="chip" style="background:#15222f;"></span>Azul marino</button>
+        <button class="swatch" data-bg="#3a0f14"><span class="chip" style="background:#3a0f14;"></span>Granate oscuro</button>
+      </div>
+      <label class="field-label">Color personalizado:</label>
+      <div class="custom-color-row">
+        <input type="color" id="colorBg" value="#0a0a0a">
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <h3>Tipo de fuente</h3>
+      <div class="font-options">
+        <label><span>Moderna (sans-serif)</span>
+          <input type="radio" name="fontfam" value="-apple-system,'Segoe UI',Roboto,Arial,sans-serif" checked></label>
+        <label><span>Clásica (serif)</span>
+          <input type="radio" name="fontfam" value="Georgia,'Times New Roman',serif"></label>
+        <label><span>Monoespaciada</span>
+          <input type="radio" name="fontfam" value="'Courier New',monospace"></label>
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <h3>Vista previa</h3>
+      <div class="preview-box" id="previewBox">
+        <span id="previewText">Porque de tal manera amó Dios al mundo, que…</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MIS FAVORITOS ============ -->
+  <div class="screen" id="screen-favoritos">
+    <div class="screen-header">
+      <h2>☆ Mis Favoritos</h2>
+      <button class="btn-link" data-go-home>‹ Volver</button>
+    </div>
+    <div id="favoritosList"></div>
+  </div>
+
+  <!-- ============ HISTORIAL RECIENTE ============ -->
+  <div class="screen" id="screen-historial">
+    <div class="screen-header">
+      <h2>Historial Reciente</h2>
+      <div class="actions">
+        <button class="btn-link danger" id="btnLimpiarHistorial">🗑 Limpiar</button>
+        <button class="btn-link" data-go-home>‹ Volver</button>
+      </div>
+    </div>
+    <div id="historialList"></div>
+  </div>
+
+  <!-- ============ LETRAS DE CANCIONES ============ -->
+  <div class="screen" id="screen-canciones">
+    <div class="screen-header">
+      <h2>Letras de canciones</h2>
+      <button class="btn-link" data-go-home>‹ Volver</button>
+    </div>
+
+    <div class="song-tabs" id="songTabs">
+      <button class="active" data-song="0">Canción 1</button>
+      <button data-song="1">Canción 2</button>
+      <button data-song="2">Canción 3</button>
+      <button data-song="3">Canción 4</button>
+    </div>
+
+    <div class="field-block">
+      <input type="text" id="songTitle" placeholder="Título de la canción 1">
+    </div>
+
+    <textarea class="lyrics" id="songLyrics" placeholder="Pega la letra de la canción aquí. Separa las estrofas con una línea en blanco. Acordes entre corchetes: [G]Tu [Am]gracia..."></textarea>
+
+    <input type="file" id="songAudioFile" accept="audio/*" style="display:none;">
+    <button class="btn btn-half" id="btnSubirMusica" style="background:var(--darkbtn-2);">⬆ Subir música (MP3, WAV...)</button>
+
+    <div class="audio-player" id="audioPlayer" style="display:none;">
+      <div class="row">
+        <button id="btnPlayPause">▶</button>
+        <input type="range" id="audioSeek" min="0" max="100" value="0">
+        <span class="time" id="audioTime">0:00 / 0:00</span>
+        <button class="btn-link danger" id="btnDelAudio" style="padding:4px;">🗑</button>
+      </div>
+      <button class="btn btn-half" id="btnSincronizar" style="background:var(--darkbtn-2);margin-top:12px;">🔄 Marcar línea actual (karaoke)</button>
+      <div class="hint" style="margin:8px 0 0;">Reproduce la canción y pulsa el botón en cada línea nueva para sincronizar el karaoke.</div>
+    </div>
+
+    <button class="btn btn-gold" id="btnDetectarLetra">⭐ Detectar letra automáticamente</button>
+    <div class="hint">Esta función necesita un servicio externo de transcripción por IA (no incluido para mantener la app sin dependencias). Puedes pegar la letra manualmente arriba.</div>
+
+    <div class="row-btns">
+      <button class="btn btn-half" id="btnAgrandarSong">+ Agrandar</button>
+      <button class="btn btn-half" id="btnAchicarSong">− Achicar</button>
+    </div>
+    <div class="row-btns">
+      <button class="btn btn-red" id="btnLimpiarCancion">🗑 Limpiar</button>
+      <button class="btn btn-green" id="btnProyectarCancion">🎵 Proyectar</button>
+    </div>
+  </div>
+
+  <!-- ============ MIS IMÁGENES ============ -->
+  <div class="screen" id="screen-imagenes">
+    <div class="screen-header">
+      <h2>Mis Imágenes</h2>
+      <button class="btn-link" data-go-home>‹ Volver</button>
+    </div>
+
+    <input type="file" id="imageFileInput" accept="image/*" multiple style="display:none;">
+    <button class="btn btn-green" id="btnSubirImagen">⬆ Subir imágenes</button>
+    <div class="hint">Las imágenes quedan guardadas en el teléfono y siguen disponibles aunque cierres la app.</div>
+
+    <div id="imagesEmpty" class="hint" style="text-align:center;margin-top:24px;">
+      Todavía no has subido ninguna imagen.
+    </div>
+    <div class="images-grid" id="imagesGrid"></div>
+  </div>
+
+  <!-- ============ PICKER (Libro / Capítulo / Versículo) ============ -->
+  <div class="screen" id="screen-picker">
+    <div class="screen-header">
+      <h2 id="pickerTitle">Libro</h2>
+      <button class="btn-link" data-go-home>‹ Volver</button>
+    </div>
+    <div class="picker-list" id="pickerList"></div>
+  </div>
+
+</div>
+
+<!-- Modal: Buscar libros y versículos -->
+<div class="overlay" id="modalBuscar">
+  <div class="modal">
+    <h2>🔍 Buscar libros y versículos<button class="x" data-close>×</button></h2>
+    <div class="search-input-row">
+      <input type="text" id="buscarInput" placeholder="Libro, referencia (Juan 3:16) o palabra">
+      <button class="mic" id="btnMic" title="Buscar por voz">🎤</button>
+    </div>
+    <p class="hint">Escribe un nombre de libro, una referencia (ej. Juan 3:16) o una palabra. También puedes usar el micrófono y decir la cita.</p>
+    <div id="buscarMsg"></div>
+    <button class="btn btn-blue" id="buscarSubmit">Buscar</button>
+    <div id="buscarResultados"></div>
+  </div>
+</div>
+
+<!-- Modal: Compartir -->
+<div class="overlay" id="modalCompartir">
+  <div class="modal">
+    <h2>Compartir<button class="x" data-close>×</button></h2>
+    <div class="share-grid">
+      <button class="share-opt" id="shareWhatsapp"><span class="ic">💬</span>WhatsApp</button>
+      <button class="share-opt" id="shareTelegram"><span class="ic">✈️</span>Telegram</button>
+      <button class="share-opt" id="shareFacebook"><span class="ic">📘</span>Facebook</button>
+      <button class="share-opt" id="shareX"><span class="ic">✕</span>X (Twitter)</button>
+      <button class="share-opt" id="shareCopy"><span class="ic">🔗</span>Copiar</button>
+      <button class="share-opt" id="shareNative"><span class="ic">↗</span>Compartir</button>
+    </div>
+  </div>
+</div>
+
+<script src="biblia-datos.js"></script>
+<script>
+(function(){
+  // ============================================================
+  // Biblia Reina-Valera (dominio público) — datos 100% offline
+  // Cargados desde biblia-datos.js (window.BIBLE_DATA), sin internet.
+  // ============================================================
+  const $ = (id) => document.getElementById(id);
+
+  const state = {
+    books: [],
+    currentBook: null,
+    currentChapter: 1,
+    verses: [],
+    currentVerseIndex: 0,
+    favorites: [],
+    history: [],
+    songs: [
+      {title:'', lyrics:'', audioUrl:null, audioName:'', marks:[]},
+      {title:'', lyrics:'', audioUrl:null, audioName:'', marks:[]},
+      {title:'', lyrics:'', audioUrl:null, audioName:'', marks:[]},
+      {title:'', lyrics:'', audioUrl:null, audioName:'', marks:[]}
+    ],
+    currentSong: 0,
+    images: [],        // [{id, name, data}]  data = imagen en base64
+    currentImage: null, // id de la imagen proyectada
+    anterior: null,     // lo que estaba proyectado antes de la imagen
+    displayMode: 'verse', // 'verse' | 'song' | 'image' | 'empty'
+    fontSize: 32
+  };
+
+  const statusEl = $('status');
+  function setStatus(msg){ statusEl.textContent = msg; }
+
+  // ---------- Screen navigation ----------
+  function showScreen(id){
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    $(id).classList.add('active');
+    window.scrollTo(0,0);
+  }
+  document.querySelectorAll('[data-go-home]').forEach(b => b.addEventListener('click', () => showScreen('screen-home')));
+
+  function showTranslationLabel(text){
+    let lbl = $('translationLabel');
+    if(!lbl){
+      lbl = document.createElement('div');
+      lbl.id = 'translationLabel';
+      lbl.style.cssText = 'text-align:center;color:var(--muted);font-size:.8rem;margin-top:-10px;margin-bottom:14px;';
+      document.querySelector('header.top').after(lbl);
+    }
+    lbl.textContent = text;
+  }
+
+  function init(){
+    setStatus('Cargando Biblia...');
+    if(!window.BIBLE_DATA || !window.BIBLE_DATA.length){
+      setStatus('No se encontró biblia-datos.js. Colócalo en la misma carpeta que este archivo HTML.');
+      return;
+    }
+    state.books = window.BIBLE_DATA.map((b, idx) => ({
+      id: idx,
+      commonName: b.name,
+      numberOfChapters: b.chapters.length,
+      chapters: b.chapters
+    }));
+    state.currentBook = state.books[0];
+    $('libroNombre').textContent = state.currentBook.commonName;
+    showTranslationLabel('Santa Biblia — Reina Valera 1960 · sin conexión');
+    loadChapter(1, true);
+    setStatus('');
+  }
+
+  function loadChapter(chapterNum, autoShow){
+    const chapterVerses = state.currentBook.chapters[chapterNum-1] || [];
+    const verses = chapterVerses.map((text, i) => ({ number: i+1, text }));
+    state.verses = verses;
+    state.currentChapter = chapterNum;
+    state.currentVerseIndex = 0;
+    $('capituloNum').textContent = chapterNum;
+    $('versiculoNum').textContent = verses[0] ? verses[0].number : '';
+    if(autoShow !== false) showVerse();
+  }
+
+  function currentReference(){
+    const v = state.verses[state.currentVerseIndex];
+    if(!v) return '';
+    return `${state.currentBook.commonName} ${state.currentChapter}:${v.number}`;
+  }
+
+  function showVerse(){
+    const v = state.verses[state.currentVerseIndex];
+    if(!v) return;
+    state.displayMode = 'verse';
+    ocultarImagenProyectada();
+    $('displayEmpty').style.display = 'none';
+    $('displayContent').style.display = 'block';
+    $('displayRef').style.display = 'block';
+    $('displayControls').style.display = 'flex';
+    $('displayContent').textContent = v.text;
+    $('displayRef').textContent = currentReference();
+    updateFavButtonState();
+    pushHistory();
+  }
+
+  function clearDisplay(){
+    state.displayMode = 'empty';
+    $('displayEmpty').style.display = 'block';
+    $('displayContent').style.display = 'none';
+    $('displayRef').style.display = 'none';
+    $('displayControls').style.display = 'none';
+  }
+
+  function pushHistory(){
+    const ref = currentReference();
+    if(!ref) return;
+    state.history = state.history.filter(h => h.ref !== ref);
+    state.history.unshift({ref, text: state.verses[state.currentVerseIndex].text, ts: Date.now()});
+    state.history = state.history.slice(0, 40);
+  }
+
+  // ---------- Libro / Capítulo / Versículo pickers ----------
+  let pickerMode = null; // 'libro' | 'capitulo' | 'versiculo'
+
+  function openPicker(mode){
+    pickerMode = mode;
+    const list = $('pickerList');
+    list.innerHTML = '';
+    if(mode === 'libro'){
+      $('pickerTitle').textContent = 'Libro';
+      state.books.forEach(b => {
+        const row = document.createElement('div');
+        row.className = 'picker-row' + (b.id === state.currentBook.id ? ' selected' : '');
+        row.innerHTML = `<span>${b.commonName}</span><span class="radio"></span>`;
+        row.addEventListener('click', async () => {
+          state.currentBook = b;
+          $('libroNombre').textContent = b.commonName;
+          try{ await loadChapter(1); }catch(e){ setStatus('No se pudo cargar el capítulo.'); }
+          showScreen('screen-home');
+        });
+        list.appendChild(row);
+      });
+    } else if(mode === 'capitulo'){
+      $('pickerTitle').textContent = 'Capítulo';
+      const n = state.currentBook.numberOfChapters || 1;
+      for(let i=1;i<=n;i++){
+        const row = document.createElement('div');
+        row.className = 'picker-row' + (i === state.currentChapter ? ' selected' : '');
+        row.innerHTML = `<span>${i}</span><span class="radio"></span>`;
+        row.addEventListener('click', async () => {
+          try{ await loadChapter(i); }catch(e){ setStatus('No se pudo cargar el capítulo.'); }
+          showScreen('screen-home');
+        });
+        list.appendChild(row);
+      }
+    } else if(mode === 'versiculo'){
+      $('pickerTitle').textContent = 'Versículo';
+      state.verses.forEach((v, idx) => {
+        const row = document.createElement('div');
+        row.className = 'picker-row' + (idx === state.currentVerseIndex ? ' selected' : '');
+        row.innerHTML = `<span>${v.number}</span><span class="radio"></span>`;
+        row.addEventListener('click', () => {
+          state.currentVerseIndex = idx;
+          $('versiculoNum').textContent = v.number;
+          showVerse();
+          showScreen('screen-home');
+        });
+        list.appendChild(row);
+      });
+    }
+    showScreen('screen-picker');
+  }
+
+  $('btnLibro').addEventListener('click', () => openPicker('libro'));
+  $('btnCapitulo').addEventListener('click', () => openPicker('capitulo'));
+  $('btnVersiculo').addEventListener('click', () => openPicker('versiculo'));
+
+  // ---------- Tamaño de letra ----------
+  function applySize(px){
+    state.fontSize = px;
+    document.documentElement.style.setProperty('--display-size', px+'px');
+    $('rangeSize').value = px;
+    $('sizeLabel').textContent = px+'px';
+  }
+  $('btnAgrandar').addEventListener('click', () => applySize(Math.min(state.fontSize+4, 96)));
+  $('btnAchicar').addEventListener('click', () => applySize(Math.max(state.fontSize-4, 12)));
+  $('btnAgrandarSong').addEventListener('click', () => applySize(Math.min(state.fontSize+4, 96)));
+  $('btnAchicarSong').addEventListener('click', () => applySize(Math.max(state.fontSize-4, 12)));
+
+  // ---------- Pantalla completa ----------
+  let projecting = false;
+  function lockLandscape(){
+    // Intenta forzar el giro a horizontal (funciona en Chrome/Android).
+    // En iPhone (Safari) esta función no existe: el usuario deberá girar el
+    // celular manualmente, ya que iOS no permite forzar la orientación.
+    try{
+      if(screen.orientation && screen.orientation.lock){
+        screen.orientation.lock('landscape').catch(()=>{ /* el dispositivo no lo permitió, seguimos igual */ });
+      }
+    }catch(e){ /* API no disponible en este navegador, se ignora */ }
+  }
+  function unlockOrientation(){
+    try{
+      if(screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
+    }catch(e){}
+  }
+  function enterFullscreen(){
+    projecting = true;
+    document.body.classList.add('projecting');
+    syncEntrarSalirButton();
+    // Pedimos también la pantalla completa real del navegador: Chrome solo
+    // autoriza el giro forzado a horizontal si la página está en pantalla
+    // completa de verdad. Al estar instalada como app (APK), esto no debería
+    // mostrar ningún aviso, porque ahí no hay barra de navegador que "salir".
+    try{
+      const el = document.documentElement;
+      const req = el.requestFullscreen ? el.requestFullscreen() : (el.webkitRequestFullscreen ? el.webkitRequestFullscreen() : null);
+      if(req && req.then) req.then(lockLandscape).catch(()=>lockLandscape());
+      else setTimeout(lockLandscape, 300);
+    }catch(e){ lockLandscape(); }
+  }
+  function exitFullscreen(){
+    projecting = false;
+    document.body.classList.remove('projecting');
+    syncEntrarSalirButton();
+    try{
+      if(document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
+      else if(document.webkitFullscreenElement && document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }catch(e){}
+    unlockOrientation();
+  }
+  function isProjecting(){
+    return projecting;
+  }
+  function syncEntrarSalirButton(){
+    const btn = $('btnSalir');
+    if(isProjecting()){
+      btn.textContent = 'Salir';
+      btn.onclick = exitFullscreen;
+    } else {
+      btn.textContent = 'Entrar';
+      btn.onclick = enterFullscreen;
+    }
+  }
+  $('btnProyectar').addEventListener('click', enterFullscreen);
+
+  // ---------- Swipe izq/der en el panel de proyección (solo aquí) ----------
+  (function(){
+    const panel = $('displayPanel');
+    let startX = 0, startY = 0, tracking = false;
+    const THRESHOLD = 50;
+    panel.addEventListener('touchstart', (e) => {
+      if(e.touches.length !== 1) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      tracking = true;
+    }, {passive:true});
+    panel.addEventListener('touchend', (e) => {
+      if(!tracking) return;
+      tracking = false;
+      if(!isProjecting()) return; // el swipe solo debe funcionar en pantalla completa
+      const endX = e.changedTouches[0].clientX;
+      const endY = e.changedTouches[0].clientY;
+      const dx = endX - startX, dy = endY - startY;
+      if(Math.abs(dx) > THRESHOLD && Math.abs(dx) > Math.abs(dy)*1.5){
+        if(dx < 0) step(1);   // swipe izquierda -> siguiente
+        else step(-1);        // swipe derecha -> anterior
+      }
+    }, {passive:true});
+  })();
+
+  // ---------- Entrar/Salir (pantalla completa) / copiar / compartir ----------
+  syncEntrarSalirButton();
+  $('btnCopiar').addEventListener('click', async () => {
+    const txt = state.displayMode === 'song'
+      ? `${state.songs[state.currentSong].title}\n${state.songs[state.currentSong].lyrics}`
+      : `${$('displayContent').textContent}\n${$('displayRef').textContent}`;
+    try{ await navigator.clipboard.writeText(txt); setStatus('Copiado ✓'); setTimeout(()=>setStatus(''),1200); }
+    catch(e){ setStatus('No se pudo copiar.'); }
+  });
+
+  let shareText = '';
+  $('btnCompartir').addEventListener('click', () => {
+    shareText = state.displayMode === 'song'
+      ? `${state.songs[state.currentSong].title}\n${state.songs[state.currentSong].lyrics}`
+      : `${$('displayContent').textContent} — ${$('displayRef').textContent}`;
+    openModal('modalCompartir');
+  });
+  $('shareWhatsapp').addEventListener('click', () => window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`,'_blank'));
+  $('shareTelegram').addEventListener('click', () => window.open(`https://t.me/share/url?url=&text=${encodeURIComponent(shareText)}`,'_blank'));
+  $('shareFacebook').addEventListener('click', () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(location.href)}&quote=${encodeURIComponent(shareText)}`,'_blank'));
+  $('shareX').addEventListener('click', () => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`,'_blank'));
+  $('shareCopy').addEventListener('click', async () => {
+    try{ await navigator.clipboard.writeText(shareText); setStatus('Copiado ✓'); setTimeout(()=>setStatus(''),1200); }catch(e){}
+    closeModal('modalCompartir');
+  });
+  $('shareNative').addEventListener('click', async () => {
+    if(navigator.share){ try{ await navigator.share({text:shareText}); }catch(e){} }
+    else { setStatus('Tu navegador no soporta compartir nativo.'); setTimeout(()=>setStatus(''),1500); }
+    closeModal('modalCompartir');
+  });
+
+  // ---------- Favoritos ----------
+  function updateFavButtonState(){
+    const ref = currentReference();
+    const isFav = !!state.favorites.find(f => f.ref === ref);
+    $('btnFavorito').textContent = isFav ? '⭐ Quitar de favoritos' : '⭐ Guardar en favoritos';
+  }
+  $('btnFavorito').addEventListener('click', () => {
+    const ref = currentReference();
+    if(!ref) return;
+    const idx = state.favorites.findIndex(f => f.ref === ref);
+    if(idx >= 0) state.favorites.splice(idx,1);
+    else state.favorites.unshift({ref, text: state.verses[state.currentVerseIndex].text});
+    updateFavButtonState();
+  });
+  function renderFavoritos(){
+    const el = $('favoritosList');
+    if(!state.favorites.length){ el.innerHTML = '<div class="empty">Aún no tienes favoritos guardados.</div>'; return; }
+    el.innerHTML = state.favorites.map((f,i) => `
+      <div class="list-item">
+        <button class="go" data-goto-fav="${i}"><div class="ref">${f.ref}</div><div class="snippet">${f.text.slice(0,70)}${f.text.length>70?'…':''}</div></button>
+        <button class="del" data-del-fav="${i}">🗑</button>
+      </div>`).join('');
+  }
+
+  // ---------- Historial ----------
+  function renderHistorial(){
+    const el = $('historialList');
+    if(!state.history.length){ el.innerHTML = '<div class="empty">Todavía no has visto ningún versículo.</div>'; return; }
+    el.innerHTML = state.history.map((h,i) => `
+      <div class="list-item">
+        <button class="go" data-goto-hist="${i}"><div class="ref">${h.ref}</div><div class="snippet">${h.text.slice(0,70)}${h.text.length>70?'…':''}</div></button>
+      </div>`).join('');
+  }
+  $('btnLimpiarHistorial').addEventListener('click', () => { state.history = []; renderHistorial(); });
+
+  $('btnFavoritosList').addEventListener('click', () => { renderFavoritos(); showScreen('screen-favoritos'); });
+  $('btnHistorial').addEventListener('click', () => { renderHistorial(); showScreen('screen-historial'); });
+
+  document.body.addEventListener('click', async (e) => {
+    const gf = e.target.closest('[data-goto-fav]');
+    if(gf){ await jumpToRef(state.favorites[gf.dataset.gotoFav].ref); showScreen('screen-home'); return; }
+    const df = e.target.closest('[data-del-fav]');
+    if(df){ state.favorites.splice(df.dataset.delFav,1); renderFavoritos(); return; }
+    const gh = e.target.closest('[data-goto-hist]');
+    if(gh){ await jumpToRef(state.history[gh.dataset.gotoHist].ref); showScreen('screen-home'); return; }
+  });
+
+  async function jumpToRef(ref){
+    const m = ref.match(/^(.+)\s+(\d+):(\d+)$/);
+    if(!m) return;
+    const [, name, chap, vers] = m;
+    const book = state.books.find(b => b.commonName === name);
+    if(!book) return;
+    state.currentBook = book;
+    $('libroNombre').textContent = book.commonName;
+    await loadChapter(parseInt(chap,10), false);
+    const idx = state.verses.findIndex(v => v.number === parseInt(vers,10));
+    state.currentVerseIndex = idx >= 0 ? idx : 0;
+    $('capituloNum').textContent = chap;
+    $('versiculoNum').textContent = state.verses[state.currentVerseIndex].number;
+    showVerse();
+  }
+
+  // ---------- Anterior / Siguiente ----------
+  async function step(delta){
+    let idx = state.currentVerseIndex + delta;
+    if(idx >= 0 && idx < state.verses.length){
+      state.currentVerseIndex = idx;
+      $('versiculoNum').textContent = state.verses[idx].number;
+      showVerse();
+      return;
+    }
+    let chap = state.currentChapter + (delta > 0 ? 1 : -1);
+    if(chap < 1 || chap > (state.currentBook.numberOfChapters||1)) return;
+    try{
+      await loadChapter(chap, false);
+      state.currentVerseIndex = delta > 0 ? 0 : state.verses.length - 1;
+      $('versiculoNum').textContent = state.verses[state.currentVerseIndex].number;
+      showVerse();
+    }catch(e){ setStatus('No se pudo cambiar de capítulo.'); }
+  }
+  $('btnAnterior').addEventListener('click', () => step(-1));
+  $('btnSiguiente').addEventListener('click', () => step(1));
+
+  // ---------- Ajustes de pantalla ----------
+  $('btnAjustes').addEventListener('click', () => showScreen('screen-ajustes'));
+  $('rangeSize').addEventListener('input', e => applySize(parseInt(e.target.value,10)));
+  document.querySelectorAll('.swatch').forEach(sw => {
+    sw.addEventListener('click', () => {
+      document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+      sw.classList.add('selected');
+      const c = sw.dataset.bg;
+      document.documentElement.style.setProperty('--display-bg', c);
+      $('colorBg').value = c;
+    });
+  });
+  $('colorBg').addEventListener('input', e => {
+    document.documentElement.style.setProperty('--display-bg', e.target.value);
+    document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+  });
+  document.querySelectorAll('input[name=fontfam]').forEach(r => {
+    r.addEventListener('change', () => document.documentElement.style.setProperty('--display-font', r.value));
+  });
+
+  // ---------- Buscar libro o versículo ----------
+  function normalize(s){ return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+  function openModal(id){ $(id).classList.add('open'); }
+  function closeModal(id){ $(id).classList.remove('open'); }
+  $('btnBuscar').addEventListener('click', () => { $('buscarMsg').textContent=''; renderResultados([]); openModal('modalBuscar'); });
+  $('topSearch').addEventListener('click', () => { $('buscarMsg').textContent=''; renderResultados([]); openModal('modalBuscar'); });
+
+  async function doSearch(){
+    const raw = $('buscarInput').value.trim();
+    $('buscarMsg').textContent = '';
+    renderResultados([]);
+    if(!raw) return;
+
+    const results = [];
+
+    // 1) ¿Coincide con "Libro capítulo[:versículo]"?
+    const m = raw.match(/^(.+?)\s+(\d+)(?:\s*[:.]\s*(\d+))?$/);
+    if(m){
+      const [, bookName, chap, vers] = m;
+      const target = normalize(bookName);
+      const book = state.books.find(b => normalize(b.commonName) === target) ||
+                   state.books.find(b => normalize(b.commonName).includes(target) || target.includes(normalize(b.commonName)));
+      if(book){
+        const chapNum = Math.min(Math.max(parseInt(chap,10),1), book.numberOfChapters||1);
+        const chapterVerses = book.chapters[chapNum-1] || [];
+        if(vers){
+          const vnum = parseInt(vers,10);
+          if(chapterVerses[vnum-1] != null){
+            results.push({book, chapter:chapNum, verse:vnum, text:chapterVerses[vnum-1]});
+          }
+        } else {
+          chapterVerses.forEach((text, i) => results.push({book, chapter:chapNum, verse:i+1, text}));
+        }
+      }
+    }
+
+    // 2) Si no hubo resultados de referencia, o el texto no era una referencia clara,
+    //    buscamos la palabra/frase en toda la Biblia.
+    if(!results.length && raw.length >= 3){
+      const q = normalize(raw);
+      outer:
+      for(const book of state.books){
+        for(let c=0; c<book.chapters.length; c++){
+          const verses = book.chapters[c];
+          for(let v=0; v<verses.length; v++){
+            if(normalize(verses[v]).includes(q)){
+              results.push({book, chapter:c+1, verse:v+1, text:verses[v]});
+              if(results.length >= 60) break outer;
+            }
+          }
+        }
+      }
+    }
+
+    if(!results.length){ $('buscarMsg').textContent = 'No se encontraron resultados.'; return; }
+    renderResultados(results);
+  }
+
+  function renderResultados(results){
+    const el = $('buscarResultados');
+    if(!results.length){ el.innerHTML = ''; return; }
+    const shown = results.slice(0, 60);
+    el.innerHTML = shown.map((r,i) => `
+      <button class="result-item" data-result="${i}">
+        <div class="result-ref">${r.book.commonName} ${r.chapter}:${r.verse}</div>
+        <div class="result-snippet">${r.text.trim().slice(0,90)}${r.text.trim().length>90?'…':''}</div>
+      </button>`).join('') + (results.length>60 ? `<div class="result-more">Mostrando los primeros 60 resultados de ${results.length}.</div>` : '');
+    el.querySelectorAll('[data-result]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const r = shown[parseInt(btn.dataset.result,10)];
+        goToResult(r);
+      });
+    });
+  }
+
+  function goToResult(r){
+    state.currentBook = r.book;
+    $('libroNombre').textContent = r.book.commonName;
+    loadChapter(r.chapter, false);
+    const idx = state.verses.findIndex(v => v.number === r.verse);
+    state.currentVerseIndex = idx >= 0 ? idx : 0;
+    $('capituloNum').textContent = r.chapter;
+    $('versiculoNum').textContent = state.verses[state.currentVerseIndex].number;
+    showVerse();
+    closeModal('modalBuscar');
+    showScreen('screen-home');
+    enterFullscreen(); // directo al proyector
+  }
+  $('buscarSubmit').addEventListener('click', doSearch);
+  $('buscarInput').addEventListener('keydown', e => { if(e.key === 'Enter') doSearch(); });
+
+  // ---------- Búsqueda por voz inteligente ----------
+  // Cuando el reconocimiento de voz junta capítulo y versículo en un solo número
+  // (p.ej. "Mateo 11" = Mateo 1:1, "Lucas 291" = Lucas 29:1), lo separamos así:
+  //  - Si se oyeron DOS números sueltos ("Corintios 11 1") -> capítulo=11, versículo=1.
+  //  - Si se oyó UN solo número pegado, se reparte por mitad, dando el dígito
+  //    extra al capítulo cuando el total es impar: 2 dígitos -> 1+1, 3 -> 2+1, 4 -> 2+2...
+  function splitChapterVerse(numStr){
+    if(numStr.length <= 1) return { chapter: numStr, verse: null };
+    const chapLen = Math.ceil(numStr.length / 2);
+    return { chapter: numStr.slice(0, chapLen), verse: numStr.slice(chapLen) };
+  }
+
+  function parseVoiceReference(raw){
+    let t = raw.trim().toLowerCase();
+    // Ordinales hablados -> número + libro (para "1 Corintios", "2 Juan", "3 Juan", etc.)
+    t = t.replace(/^(primera|primero|1ra|1er)\s+(de\s+)?/, '1 ')
+         .replace(/^(segunda|segundo|2da|2do)\s+(de\s+)?/, '2 ')
+         .replace(/^(tercera|tercero|3ra|3er)\s+(de\s+)?/, '3 ');
+
+    const m = t.match(/^(.+?)\s+(\d+)(?:\s+(\d+))?$/);
+    if(!m) return raw; // no se detectaron números: se busca como frase/palabra
+
+    const [, bookPart, num1, num2] = m;
+    let chapter, verse;
+    if(num2){
+      chapter = num1; verse = num2; // dos números sueltos -> directos
+    } else {
+      const sp = splitChapterVerse(num1);
+      chapter = sp.chapter; verse = sp.verse;
+    }
+    return verse ? `${bookPart} ${chapter}:${verse}` : `${bookPart} ${chapter}`;
+  }
+
+  // Voice search
+  $('btnMic').addEventListener('click', () => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SR){ $('buscarMsg').textContent = 'Tu navegador no soporta búsqueda por voz.'; return; }
+    const rec = new SR();
+    rec.lang = 'es-ES';
+    $('btnMic').classList.add('listening');
+    rec.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      const cleaned = parseVoiceReference(transcript);
+      $('buscarInput').value = cleaned;
+      doSearch();
+    };
+    rec.onerror = () => { $('buscarMsg').textContent = 'No se pudo recibir el audio, vuelve a intentarlo más tarde.'; };
+    rec.onend = () => { $('btnMic').classList.remove('listening'); };
+    try{ rec.start(); }catch(e){ $('buscarMsg').textContent = 'No se pudo iniciar el micrófono.'; }
+  });
+
+  document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', e => closeModal(e.target.closest('.overlay').id)));
+  document.querySelectorAll('.overlay').forEach(ov => ov.addEventListener('click', e => { if(e.target===ov) closeModal(ov.id); }));
+
+  // ---------- Letras de canciones ----------
+  $('btnLetras').addEventListener('click', () => { loadSongIntoForm(); showScreen('screen-canciones'); });
+
+  function loadSongIntoForm(){
+    const s = state.songs[state.currentSong];
+    $('songTitle').value = s.title;
+    $('songTitle').placeholder = `Título de la canción ${state.currentSong+1}`;
+    $('songLyrics').value = s.lyrics;
+    if(s.audioUrl){
+      $('audioPlayer').style.display = 'block';
+      audioEl.src = s.audioUrl;
+    } else {
+      $('audioPlayer').style.display = 'none';
+    }
+  }
+  document.querySelectorAll('#songTabs button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      saveCurrentSongForm();
+      document.querySelectorAll('#songTabs button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.currentSong = parseInt(btn.dataset.song,10);
+      loadSongIntoForm();
+    });
+  });
+  function saveCurrentSongForm(){
+    const s = state.songs[state.currentSong];
+    s.title = $('songTitle').value;
+    s.lyrics = $('songLyrics').value;
+  }
+  $('songTitle').addEventListener('input', saveCurrentSongForm);
+  $('songLyrics').addEventListener('input', saveCurrentSongForm);
+
+  $('btnSubirMusica').addEventListener('click', () => $('songAudioFile').click());
+  $('songAudioFile').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const url = URL.createObjectURL(file);
+    const s = state.songs[state.currentSong];
+    s.audioUrl = url; s.audioName = file.name; s.marks = [];
+    $('audioPlayer').style.display = 'block';
+    audioEl.src = url;
+  });
+  $('btnDelAudio').addEventListener('click', () => {
+    const s = state.songs[state.currentSong];
+    s.audioUrl = null; s.audioName=''; s.marks=[];
+    $('audioPlayer').style.display = 'none';
+    audioEl.pause(); audioEl.removeAttribute('src');
+  });
+
+  const audioEl = new Audio();
+  $('btnPlayPause').addEventListener('click', () => {
+    if(audioEl.paused){ audioEl.play(); $('btnPlayPause').textContent='⏸'; }
+    else{ audioEl.pause(); $('btnPlayPause').textContent='▶'; }
+  });
+  function fmtTime(t){ if(!isFinite(t)) return '0:00'; const m=Math.floor(t/60), s=Math.floor(t%60); return `${m}:${s<10?'0':''}${s}`; }
+  audioEl.addEventListener('timeupdate', () => {
+    if(audioEl.duration){ $('audioSeek').value = (audioEl.currentTime/audioEl.duration)*100; }
+    $('audioTime').textContent = `${fmtTime(audioEl.currentTime)} / ${fmtTime(audioEl.duration)}`;
+  });
+  $('audioSeek').addEventListener('input', () => {
+    if(audioEl.duration) audioEl.currentTime = (audioEl.duration * $('audioSeek').value)/100;
+  });
+  $('btnSincronizar').addEventListener('click', () => {
+    const s = state.songs[state.currentSong];
+    s.marks.push(audioEl.currentTime || 0);
+    setStatus(`Línea marcada en ${fmtTime(audioEl.currentTime)} ✓`);
+    setTimeout(()=>setStatus(''),1200);
+  });
+  $('btnDetectarLetra').addEventListener('click', () => {
+    setStatus('Esta función requiere un servicio de IA externo (no disponible sin conexión a un backend).');
+    setTimeout(()=>setStatus(''),3000);
+  });
+
+  $('btnLimpiarCancion').addEventListener('click', () => {
+    const s = state.songs[state.currentSong];
+    s.title=''; s.lyrics=''; s.audioUrl=null; s.audioName=''; s.marks=[];
+    $('audioPlayer').style.display='none';
+    audioEl.pause(); audioEl.removeAttribute('src');
+    loadSongIntoForm();
+  });
+  $('btnProyectarCancion').addEventListener('click', () => {
+    saveCurrentSongForm();
+    const s = state.songs[state.currentSong];
+    state.displayMode = 'song';
+    ocultarImagenProyectada();
+    $('displayEmpty').style.display='none';
+    $('displayContent').style.display='block';
+    $('displayRef').style.display='block';
+    $('displayControls').style.display='flex';
+    $('displayContent').textContent = s.lyrics || 'Pega aquí la letra de tu canción...';
+    $('displayRef').textContent = s.title || `Canción ${state.currentSong+1}`;
+    showScreen('screen-home');
+  });
+
+  // ---------- Teclado rápido de libros ----------
+  let letraActiva = null;
+
+  // Quita tildes para que "Éxodo" también aparezca al tocar la E
+  function sinTildes(txt){
+    return (txt || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+  }
+
+  $('btnTecladoLibros').addEventListener('click', () => {
+    const caja = $('tecladoLibros');
+    const abierto = caja.style.display !== 'none';
+    if(abierto){
+      caja.style.display = 'none';
+      $('btnTecladoLibros').classList.remove('abierto');
+    } else {
+      caja.style.display = 'block';
+      $('btnTecladoLibros').classList.add('abierto');
+      renderTecladoLetras();
+    }
+  });
+
+  function renderTecladoLetras(){
+    const cont = $('tecladoLetras');
+    cont.innerHTML = '';
+    // Letras que sí tienen libros, para no ofrecer teclas que no sirven
+    const conLibros = new Set(state.books.map(b => sinTildes(b.commonName).charAt(0)));
+    // Se incluyen 1, 2 y 3 para libros como "1 Samuel" o "3 Juan"
+    const teclas = '123ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    teclas.forEach(letra => {
+      const tiene = conLibros.has(letra);
+      const tecla = document.createElement('button');
+      tecla.className = 'tecla' + (tiene ? '' : ' vacia') + (letraActiva === letra ? ' activa' : '');
+      tecla.textContent = letra;
+      if(tiene) tecla.addEventListener('click', () => mostrarLibrosDeLetra(letra));
+      else tecla.disabled = true;
+      cont.appendChild(tecla);
+    });
+  }
+
+  function mostrarLibrosDeLetra(letra){
+    letraActiva = (letraActiva === letra) ? null : letra;
+    renderTecladoLetras();
+    const cont = $('tecladoResultados');
+    cont.innerHTML = '';
+    if(!letraActiva) return;
+
+    const encontrados = state.books.filter(b => sinTildes(b.commonName).charAt(0) === letraActiva);
+    if(!encontrados.length){
+      cont.innerHTML = '<div class="teclado-vacio">No hay libros con esa letra.</div>';
+      return;
+    }
+    encontrados.forEach(b => {
+      const btn = document.createElement('button');
+      btn.className = 'libro-resultado' + (b.id === state.currentBook.id ? ' actual' : '');
+      btn.textContent = b.commonName;
+      btn.addEventListener('click', async () => {
+        state.currentBook = b;
+        $('libroNombre').textContent = b.commonName;
+        try{ await loadChapter(1); }catch(e){ setStatus('No se pudo cargar el capítulo.'); }
+        // Cerramos el teclado para que se vea el capítulo y versículo
+        letraActiva = null;
+        $('tecladoResultados').innerHTML = '';
+        $('tecladoLibros').style.display = 'none';
+        $('btnTecladoLibros').classList.remove('abierto');
+      });
+      cont.appendChild(btn);
+    });
+  }
+
+  // ---------- Mis Imágenes ----------
+  const IMAGES_KEY = 'proyector_imagenes_v1';
+
+  function saveImages(){
+    try{
+      localStorage.setItem(IMAGES_KEY, JSON.stringify(state.images));
+      return true;
+    }catch(e){
+      // Se llenó el espacio de almacenamiento del teléfono
+      setStatus('No hay espacio para guardar más imágenes. Borra alguna e inténtalo de nuevo.');
+      setTimeout(()=>setStatus(''), 4000);
+      return false;
+    }
+  }
+  function loadImages(){
+    try{
+      const raw = localStorage.getItem(IMAGES_KEY);
+      if(raw) state.images = JSON.parse(raw) || [];
+    }catch(e){ state.images = []; }
+  }
+
+  // Reduce la imagen antes de guardarla, para que ocupe poco espacio
+  function comprimirImagen(file, maxLado, calidad){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let {width, height} = img;
+          if(width > maxLado || height > maxLado){
+            const escala = Math.min(maxLado/width, maxLado/height);
+            width = Math.round(width*escala);
+            height = Math.round(height*escala);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', calidad));
+        };
+        img.onerror = reject;
+        img.src = reader.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  $('btnImagenes').addEventListener('click', () => { renderImagesGrid(); showScreen('screen-imagenes'); });
+  $('btnSubirImagen').addEventListener('click', () => $('imageFileInput').click());
+
+  $('imageFileInput').addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files || []);
+    if(!files.length) return;
+    setStatus('Procesando imágenes...');
+    for(const file of files){
+      try{
+        const data = await comprimirImagen(file, 1600, 0.82);
+        state.images.push({
+          id: 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+          name: file.name.replace(/\.[^.]+$/, ''),
+          data
+        });
+      }catch(err){ /* si una imagen falla, seguimos con las demás */ }
+    }
+    saveImages();
+    renderImagesGrid();
+    renderQuickImages();
+    setStatus('');
+    e.target.value = '';
+  });
+
+  function renderImagesGrid(){
+    const grid = $('imagesGrid');
+    grid.innerHTML = '';
+    $('imagesEmpty').style.display = state.images.length ? 'none' : 'block';
+    state.images.forEach(img => {
+      const card = document.createElement('div');
+      card.className = 'image-card' + (state.currentImage === img.id ? ' selected' : '');
+      const thumb = document.createElement('img');
+      thumb.src = img.data;
+      thumb.alt = img.name;
+      thumb.addEventListener('click', () => proyectarImagen(img.id));
+      const actions = document.createElement('div');
+      actions.className = 'image-actions';
+      const btnProj = document.createElement('button');
+      btnProj.textContent = 'Proyectar';
+      btnProj.addEventListener('click', () => proyectarImagen(img.id));
+      const btnDel = document.createElement('button');
+      btnDel.className = 'del';
+      btnDel.textContent = 'Borrar';
+      btnDel.addEventListener('click', () => borrarImagen(img.id));
+      actions.appendChild(btnProj);
+      actions.appendChild(btnDel);
+      card.appendChild(thumb);
+      card.appendChild(actions);
+      grid.appendChild(card);
+    });
+  }
+
+  function construirMiniaturas(contenedor){
+    contenedor.innerHTML = '';
+
+    // Miniatura "0": vuelve al versículo o canción que estaba proyectado
+    if(state.anterior && state.anterior.modo && state.anterior.modo !== 'empty'){
+      const cero = document.createElement('div');
+      cero.className = 'quick-thumb thumb-cero' + (state.displayMode !== 'image' ? ' active' : '');
+      cero.title = (state.anterior.modo === 'song') ? 'Volver a la canción' : 'Volver al versículo';
+      const icono = document.createElement('span');
+      icono.className = 'cero-icono';
+      icono.textContent = (state.anterior.modo === 'song') ? '♫' : '📖';
+      const numCero = document.createElement('span');
+      numCero.className = 'num';
+      numCero.textContent = '0';
+      cero.appendChild(icono);
+      cero.appendChild(numCero);
+      cero.addEventListener('click', volverAlVersiculo);
+      contenedor.appendChild(cero);
+    }
+
+    state.images.forEach((img, i) => {
+      const cuadro = document.createElement('div');
+      cuadro.className = 'quick-thumb' + (state.currentImage === img.id ? ' active' : '');
+      cuadro.title = img.name || ('Imagen ' + (i+1));
+      const thumb = document.createElement('img');
+      thumb.src = img.data;
+      thumb.alt = img.name || ('Imagen ' + (i+1));
+      const num = document.createElement('span');
+      num.className = 'num';
+      num.textContent = i + 1;
+      cuadro.appendChild(thumb);
+      cuadro.appendChild(num);
+      cuadro.addEventListener('click', () => proyectarImagen(img.id));
+      contenedor.appendChild(cuadro);
+    });
+  }
+
+  function renderQuickImages(){
+    const wrap = $('quickImages');
+    if(!state.images.length){
+      wrap.style.display = 'none';
+      $('panelImages').style.display = 'none';
+      return;
+    }
+    wrap.style.display = 'block';
+    construirMiniaturas($('quickImagesStrip'));
+    construirMiniaturas($('panelImagesStrip'));
+
+    // La tira dentro del panel solo aparece cuando hay algo proyectado
+    $('panelImages').style.display = (state.displayMode === 'empty') ? 'none' : 'block';
+
+    const actual = state.images.find(i => i.id === state.currentImage);
+    $('quickImagesLabel').textContent = actual
+      ? ('Proyectando: ' + (actual.name || 'imagen'))
+      : 'Toca una imagen para proyectarla';
+  }
+
+  function proyectarImagen(id){
+    const img = state.images.find(i => i.id === id);
+    if(!img) return;
+    // Guardamos lo que estaba proyectado para poder volver después
+    if(state.displayMode !== 'image'){
+      state.anterior = {
+        modo: state.displayMode,
+        texto: $('displayContent').textContent,
+        ref: $('displayRef').textContent
+      };
+    }
+    state.displayMode = 'image';
+    state.currentImage = id;
+    $('displayEmpty').style.display = 'none';
+    $('displayContent').style.display = 'none';
+    $('displayImage').src = img.data;
+    $('displayImage').style.display = 'block';
+    $('displayRef').style.display = 'block';
+    $('displayRef').textContent = img.name || '';
+    $('displayControls').style.display = 'flex';
+    document.body.classList.add('showing-image');
+    renderQuickImages();
+    renderImagesGrid();
+    showScreen('screen-home');
+  }
+
+  // Vuelve al versículo (o canción) que estaba proyectado antes de la imagen
+  function volverAlVersiculo(){
+    const prev = state.anterior;
+    $('displayImage').style.display = 'none';
+    document.body.classList.remove('showing-image');
+    state.currentImage = null;
+    if(prev && prev.modo && prev.modo !== 'empty'){
+      state.displayMode = prev.modo;
+      $('displayContent').textContent = prev.texto;
+      $('displayRef').textContent = prev.ref;
+      $('displayContent').style.display = 'block';
+      $('displayRef').style.display = 'block';
+    } else {
+      state.displayMode = 'verse';
+      $('displayContent').style.display = 'block';
+    }
+    renderQuickImages();
+    renderImagesGrid();
+  }
+
+  function borrarImagen(id){
+    const estabaProyectada = (state.currentImage === id);
+    state.images = state.images.filter(i => i.id !== id);
+    if(estabaProyectada && state.displayMode === 'image'){
+      volverAlVersiculo();
+    }
+    saveImages();
+    renderImagesGrid();
+    renderQuickImages();
+  }
+
+  // Al proyectar un versículo o una canción, se oculta la imagen
+  function ocultarImagenProyectada(){
+    $('displayImage').style.display = 'none';
+    document.body.classList.remove('showing-image');
+    state.currentImage = null;
+    state.anterior = null;
+    renderQuickImages();
+  }
+
+  // ---------- Ajustes preview live update ----------
+  const previewObserver = () => {
+    $('previewBox').style.background = getComputedStyle(document.documentElement).getPropertyValue('--display-bg');
+    $('previewText').style.color = getComputedStyle(document.documentElement).getPropertyValue('--display-fg');
+    $('previewText').style.fontFamily = getComputedStyle(document.documentElement).getPropertyValue('--display-font');
+    $('previewText').style.fontSize = Math.min(state.fontSize, 26)+'px';
+    $('previewText').style.fontWeight = '700';
+  };
+  ['rangeSize'].forEach(id => $(id).addEventListener('input', previewObserver));
+  document.querySelectorAll('.swatch').forEach(sw => sw.addEventListener('click', previewObserver));
+  $('colorBg').addEventListener('input', previewObserver);
+  document.querySelectorAll('input[name=fontfam]').forEach(r => r.addEventListener('change', previewObserver));
+
+  loadImages();
+  renderQuickImages();
+  init();
+  previewObserver();
+  applySize(32);
+})();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js');
+  });
+}
+</script>
+</body>
+</html>
